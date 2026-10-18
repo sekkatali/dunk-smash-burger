@@ -90,3 +90,12 @@ body {
   }
   @page { margin: 0; }
 }
+
+/* Flèche du guide d'installation iPhone */
+@keyframes install-bounce {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 14px); }
+}
+.install-arrow {
+  animation: install-bounce 0.9s ease-in-out infinite;
+}

@@ -5,7 +5,7 @@ import { supabase, errorMessage } from '../lib/supabase'
 import { toE164, useCustomer } from '../lib/customer'
 import { cx } from '../components/ui'
 
-type Mode = 'choice' | 'phone' | 'code' | 'email' | 'email_sent'
+type Mode = 'choice' | 'phone' | 'code' | 'email' | 'email_sent' | 'signup_sent'
 
 function friendly(e: unknown): string {
   const m = errorMessage(e)
@@ -13,6 +13,10 @@ function friendly(e: unknown): string {
   if (/provider is not enabled|Unsupported provider/i.test(m)) return 'Ce mode de connexion n’est pas encore activé. Choisis-en un autre.'
   if (/Token has expired|invalid/i.test(m)) return 'Code invalide ou expiré'
   if (/rate limit|too many/i.test(m)) return 'Trop de tentatives, réessaie dans quelques minutes'
+  if (/Invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect'
+  if (/already registered/i.test(m)) return 'Un compte existe déjà avec cet e-mail : connecte-toi'
+  if (/Email not confirmed/i.test(m)) return 'Confirme d’abord ton e-mail avec le lien reçu'
+  if (/Password should be/i.test(m)) return 'Mot de passe trop court (8 caractères minimum)'
   return m
 }
 
@@ -25,6 +29,8 @@ export function LoginPage() {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [signup, setSignup] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -57,6 +63,21 @@ export function LoginPage() {
     if (err) setError(friendly(err))
   }
 
+  const passwordAuth = async () => {
+    setBusy(true)
+    setError(null)
+    if (signup) {
+      const { data, error: err } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: redirectTo } })
+      setBusy(false)
+      if (err) return setError(friendly(err))
+      if (!data.session) setMode('signup_sent')
+    } else {
+      const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      setBusy(false)
+      if (err) setError(friendly(err))
+    }
+  }
+
   const sendEmail = async () => {
     setBusy(true)
     setError(null)
@@ -87,8 +108,8 @@ export function LoginPage() {
               <svg viewBox="0 0 24 24" className="size-5" aria-hidden><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-3.9zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.5 2.8-1.3z" /></svg>
               Continuer avec Apple
             </button>
-            <button type="button" onClick={() => setMode('email')} className="flex h-11 w-full items-center justify-center gap-2 text-sm font-semibold text-stone-600">
-              <Mail className="size-4" /> Recevoir un lien par e-mail
+            <button type="button" onClick={() => setMode('email')} className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-stone-300 bg-white font-bold">
+              <Mail className="size-4" /> Continuer avec mon e-mail
             </button>
           </div>
         )}
@@ -117,12 +138,28 @@ export function LoginPage() {
         )}
 
         {mode === 'email' && (
-          <div className="mt-6 space-y-3">
-            <input type="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.com"
+          <form className="mt-6 space-y-3" onSubmit={(e) => { e.preventDefault(); void passwordAuth() }}>
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-stone-100 p-1 text-sm font-semibold">
+              <button type="button" onClick={() => setSignup(false)} className={cx('rounded-full py-2', !signup && 'bg-white shadow-sm')}>J’ai un compte</button>
+              <button type="button" onClick={() => setSignup(true)} className={cx('rounded-full py-2', signup && 'bg-white shadow-sm')}>Créer un compte</button>
+            </div>
+            <input type="email" autoFocus autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.com"
               className="w-full rounded-xl border border-stone-300 px-3 py-3 outline-none focus:border-ball" />
-            <button type="button" disabled={busy || !email.includes('@')} onClick={sendEmail}
-              className="h-12 w-full rounded-full bg-ball font-bold text-white disabled:opacity-50">{busy ? 'Envoi…' : 'Recevoir mon lien de connexion'}</button>
-          </div>
+            <input type="password" autoComplete={signup ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder={signup ? 'Choisis un mot de passe (8 caractères min.)' : 'Mot de passe'} minLength={signup ? 8 : undefined}
+              className="w-full rounded-xl border border-stone-300 px-3 py-3 outline-none focus:border-ball" />
+            <button type="submit" disabled={busy || !email.includes('@') || password.length < (signup ? 8 : 1)}
+              className="h-12 w-full rounded-full bg-ball font-bold text-white disabled:opacity-50">{busy ? '…' : signup ? 'Créer mon compte' : 'Se connecter'}</button>
+            <button type="button" disabled={busy || !email.includes('@')} onClick={sendEmail} className="w-full text-sm font-semibold text-stone-500 disabled:opacity-40">
+              Mot de passe oublié ? Recevoir un lien de connexion
+            </button>
+          </form>
+        )}
+
+        {mode === 'signup_sent' && (
+          <p className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
+            Compte créé ! Clique sur le lien reçu à <b>{email}</b> pour l’activer, et c’est parti.
+          </p>
         )}
 
         {mode === 'email_sent' && (
