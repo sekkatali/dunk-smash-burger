@@ -253,7 +253,10 @@ function TeamTab() {
   const [staff, setStaff] = useState<StaffRow[]>([])
   const [invites, setInvites] = useState<InviteRow[]>([])
   const [email, setEmail] = useState('')
-  const [newRole, setNewRole] = useState('admin')
+  const [newRole, setNewRole] = useState('kitchen')
+  const [pwd, setPwd] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [created, setCreated] = useState<{ email: string; password: string } | null>(null)
   const isOwner = role === 'owner'
 
   const load = useCallback(async () => {
@@ -266,12 +269,26 @@ function TeamTab() {
   }, [])
   useEffect(() => { void load() }, [load])
 
+  const genPwd = () => {
+    const a = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const r = crypto.getRandomValues(new Uint32Array(10))
+    setPwd(Array.from(r, (n) => a[n % a.length]).join(''))
+  }
+  useEffect(genPwd, [])
+
   const invite = async () => {
     if (!email.includes('@')) return toast('E-mail invalide', 'error')
-    const { error } = await supabase.from('staff_invites').upsert({ email: email.trim().toLowerCase(), role: newRole })
-    if (error) return toast(errorMessage(error), 'error')
-    toast('Invitation enregistrée')
+    if (pwd.length < 8) return toast('Mot de passe : 8 caractères minimum', 'error')
+    setAdding(true)
+    const { data, error } = await supabase.functions.invoke('account', { body: { action: 'team_add', email: email.trim(), password: pwd, role: newRole } })
+    setAdding(false)
+    let msg = data?.error as string | undefined
+    if (!msg && error && 'context' in error) { try { msg = (await (error.context as Response).json()).error } catch { /* ignore */ } }
+    if (error || msg) return toast(msg ?? errorMessage(error), 'error')
+    setCreated({ email: email.trim().toLowerCase(), password: pwd })
+    toast(data?.existed ? 'Rôle attribué (mot de passe réinitialisé)' : 'Membre ajouté')
     setEmail('')
+    genPwd()
     void load()
   }
 
@@ -306,21 +323,34 @@ function TeamTab() {
           ))}
         </ul>
       </Card>
-      <Card title="Inviter quelqu'un">
+      <Card title="Ajouter un membre / changer un rôle">
         <p className="mb-4 text-sm text-stone-500">
-          Ajoute son e-mail ici, puis envoie-lui le lien <b>{window.location.origin}/admin/login</b> : il crée son compte avec ce même e-mail et accède directement au back-office.
+          Entre son e-mail et son rôle. Le compte est créé tout de suite (ou mis à jour s'il existe) avec le mot de passe ci-dessous : envoie-le-lui avec le lien de connexion.
         </p>
         <div className="flex flex-wrap gap-2">
           <Input className="min-w-52 flex-1" type="email" placeholder="e-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Select className="w-40" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-            <option value="admin">Administrateur</option>
+            {isOwner && <option value="admin">Administrateur</option>}
             <option value="manager">Manager</option>
             <option value="kitchen">Cuisine</option>
             <option value="marketing">Marketing</option>
             <option value="support">Support</option>
           </Select>
-          <Button onClick={invite}>Inviter</Button>
         </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Input className="min-w-52 flex-1 font-mono" placeholder="mot de passe provisoire" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+          <Button variant="outline" onClick={genPwd}>Générer</Button>
+          <Button onClick={invite} loading={adding}>Ajouter</Button>
+        </div>
+        {created && (
+          <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+            <p>Accès prêt pour <b>{created.email}</b> · mot de passe <b className="font-mono">{created.password}</b></p>
+            <a className="mt-2 inline-block font-semibold text-emerald-700 underline" target="_blank" rel="noreferrer"
+              href={`https://wa.me/?text=${encodeURIComponent(`Ton accès au back-office DUNK : ${window.location.origin}/admin/login\nE-mail : ${created.email}\nMot de passe : ${created.password}`)}`}>
+              Envoyer par WhatsApp
+            </a>
+          </div>
+        )}
         {invites.length > 0 && (
           <ul className="mt-4 divide-y divide-stone-100">
             {invites.map((i) => (

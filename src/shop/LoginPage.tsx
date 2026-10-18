@@ -67,10 +67,16 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
     if (signup) {
-      const { data, error: err } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: redirectTo } })
+      const { data, error: err } = await supabase.functions.invoke('account', { body: { action: 'signup', email: email.trim(), password } })
+      if (err || data?.error) {
+        setBusy(false)
+        let msg = data?.error as string | undefined
+        if (!msg && err && 'context' in err) { try { msg = (await (err.context as Response).json()).error } catch { /* ignore */ } }
+        return setError(msg ?? friendly(err))
+      }
+      const { error: e2 } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       setBusy(false)
-      if (err) return setError(friendly(err))
-      if (!data.session) setMode('signup_sent')
+      if (e2) setError(friendly(e2))
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       setBusy(false)

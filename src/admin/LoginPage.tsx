@@ -34,14 +34,14 @@ export default function LoginPage() {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password })
         if (err) throw err
         navigate('/admin', { replace: true })
-      } else if (mode === 'signup') {
+      } else if (mode === 'signup' && hasOwner === false) {
         const { data, error: err } = await supabase.auth.signUp({
           email, password, options: { emailRedirectTo: `${window.location.origin}/admin` },
         })
         if (err) throw err
         if (data.session) navigate('/admin', { replace: true })
         else setInfo('Compte créé. Clique sur le lien reçu par e-mail pour l’activer, puis connecte-toi.')
-      } else {
+      } else if (mode === 'reset') {
         const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/admin` })
         if (err) throw err
         setInfo('E-mail envoyé. Suis le lien pour te reconnecter.')
@@ -66,9 +66,7 @@ export default function LoginPage() {
             {mode === 'signup' && hasOwner === false && (
               <p className="mt-1 text-sm text-stone-500">Premier compte : il deviendra <b>propriétaire</b> du back-office.</p>
             )}
-            {mode === 'signup' && hasOwner && (
-              <p className="mt-1 text-sm text-stone-500">Utilise l'e-mail sur lequel le propriétaire t'a invité.</p>
-            )}
+
           </div>
           <Field label="E-mail">
             <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
@@ -87,8 +85,7 @@ export default function LoginPage() {
           <div className="flex justify-between text-sm">
             {mode === 'login' ? (
               <>
-                <button type="button" className="text-stone-500 hover:text-ink" onClick={() => setMode('reset')}>Mot de passe oublié ?</button>
-                <button type="button" className="font-semibold text-ball" onClick={() => setMode('signup')}>Créer un compte</button>
+                <p className="text-stone-500">Pas de compte ou mot de passe oublié ? Demande au propriétaire (Paramètres → Équipe).</p>
               </>
             ) : (
               <button type="button" className="font-semibold text-ball" onClick={() => setMode('login')}>← J'ai déjà un compte</button>
