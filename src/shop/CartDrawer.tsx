@@ -58,8 +58,8 @@ export function CartDrawer() {
       <div className="fixed inset-0 z-40 flex justify-end">
         <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
         <aside className="slide-up relative flex h-full w-full max-w-md flex-col bg-cream shadow-2xl">
-          <div className="flex items-center justify-between bg-ink px-5 py-4 text-white">
-            <h2 className="font-display text-2xl">Ton panier {count > 0 && <span className="text-ball">({count})</span>}</h2>
+          <div className="flex items-center justify-between bg-wine px-5 py-4 text-cream">
+            <h2 className="font-display text-xl">Ton panier {count > 0 && <span className="text-ball-light">({count})</span>}</h2>
             <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="rounded-full p-1.5 hover:bg-white/10">
               <X className="size-6" />
             </button>

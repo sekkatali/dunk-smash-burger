@@ -82,9 +82,9 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
           <X className="size-5" />
         </button>
         <div className="overflow-y-auto">
-          <FoodImage src={product.image_url} alt={product.name} className="h-56 w-full sm:h-64" />
+          <FoodImage src={product.image_url} alt={product.name} className="h-72 w-full sm:h-80" />
           <div className="p-5">
-            <h2 className="font-display text-3xl">{product.name}</h2>
+            <h2 className="font-display text-2xl">{product.name}</h2>
             {product.description && <p className="mt-2 text-stone-600">{product.description}</p>}
             <p className="mt-3 text-lg font-bold">{money(product.price)}</p>
 

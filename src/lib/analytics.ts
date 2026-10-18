@@ -12,6 +12,7 @@ type EventName = 'page_view' | 'view_product' | 'add_to_cart' | 'begin_checkout'
 
 const SID_KEY = 'dsb_sid'
 const UTM_KEY = 'dsb_utm'
+const VID_KEY = 'dsb_vid'
 const SESSION_TTL = 30 * 60 * 1000
 
 declare global {
@@ -79,6 +80,20 @@ export function getUtm(): Utm {
   }
 }
 
+/** Identifiant visiteur persistant (pour distinguer nouveaux / anciens visiteurs). */
+function getVisitorId(): string | null {
+  try {
+    let v = localStorage.getItem(VID_KEY)
+    if (!v) {
+      v = rand()
+      localStorage.setItem(VID_KEY, v)
+    }
+    return v
+  } catch {
+    return null
+  }
+}
+
 function device(): string {
   const ua = navigator.userAgent
   if (/iPad|Tablet/i.test(ua)) return 'tablette'
@@ -107,6 +122,7 @@ export function track(event: EventName, extra: { product_id?: string; value?: nu
   if (event !== 'purchase') {
     const row = {
       session_id: sid,
+      visitor_id: getVisitorId(),
       event,
       path: window.location.pathname,
       referrer: firstEventSent ? null : externalReferrer(),

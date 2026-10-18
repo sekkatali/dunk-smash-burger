@@ -1,16 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Anton", "Impact", sans-serif;
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-script: "Caveat Brush", cursive;
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 
   --color-ink: #0e0e0e;
   --color-ink-2: #1c1b1a;
   --color-ink-3: #2b2927;
-  --color-cream: #fff6e9;
-  --color-cream-2: #f6ead8;
-  --color-ball: #ff5a1f;
-  --color-ball-dark: #e14810;
+  --color-cream: #f7efdc;
+  --color-cream-2: #ece1c7;
+  --color-ball: #b5121b;
+  --color-ball-dark: #8e0e16;
+  --color-ball-light: #ff5c63;
+  --color-wine: #3a0208;
+  --color-wine-2: #5a0410;
   --color-cheddar: #ffc93c;
   --color-court: #1f6f4a;
   --color-danger: #d92d20;
@@ -30,8 +34,12 @@ body {
 }
 
 .font-display {
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
+}
+
+.font-script {
+  font-family: var(--font-script);
 }
 
 .scrollbar-none {
@@ -44,13 +52,13 @@ body {
 /* Lignes de terrain en fond du héros */
 .court-lines {
   background-image:
-    radial-gradient(circle at 50% 120%, transparent 38%, rgba(255, 90, 31, 0.18) 38.2%, rgba(255, 90, 31, 0.18) 38.8%, transparent 39%),
-    radial-gradient(circle at 50% 120%, transparent 18%, rgba(255, 90, 31, 0.14) 18.2%, rgba(255, 90, 31, 0.14) 18.8%, transparent 19%);
+    radial-gradient(circle at 50% 120%, transparent 38%, rgba(247, 239, 220, 0.07) 38.2%, rgba(247, 239, 220, 0.07) 38.8%, transparent 39%),
+    radial-gradient(circle at 50% 120%, transparent 18%, rgba(247, 239, 220, 0.05) 18.2%, rgba(247, 239, 220, 0.05) 18.8%, transparent 19%);
 }
 
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0.55); }
-  100% { box-shadow: 0 0 0 14px rgba(255, 90, 31, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(181, 18, 27, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(181, 18, 27, 0); }
 }
 .pulse-ring {
   animation: pulse-ring 1.4s ease-out infinite;

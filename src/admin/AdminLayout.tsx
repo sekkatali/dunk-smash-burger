@@ -146,7 +146,7 @@ export default function AdminLayout() {
 
   const sidebar = (
     <nav className="flex h-full flex-col">
-      <div className="px-5 py-5"><Logo /></div>
+      <div className="px-5 py-5"><Logo className="h-12" /></div>
       <ul className="flex-1 space-y-1 px-3">
         {NAV.map((n) => (
           <li key={n.to}>

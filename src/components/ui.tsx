@@ -249,7 +249,7 @@ export function useToast() {
 export function FoodImage({ src, alt, className }: { src: string | null | undefined; alt: string; className?: string }) {
   if (src) return <img src={src} alt={alt} loading="lazy" className={cx('object-cover', className)} />
   return (
-    <div className={cx('flex items-center justify-center bg-gradient-to-br from-cheddar via-ball to-ball-dark', className)}>
+    <div className={cx('flex items-center justify-center bg-gradient-to-br from-wine-2 via-wine to-ink', className)}>
       <span className="text-4xl drop-shadow" aria-hidden>🍔</span>
     </div>
   )

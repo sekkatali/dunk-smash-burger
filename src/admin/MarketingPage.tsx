@@ -277,7 +277,7 @@ function SiteTab() {
             <li key={p.id}>
               <label className="flex cursor-pointer items-center justify-between py-2">
                 <span className="text-sm font-medium">{p.name} <span className="text-stone-400">· {money(p.price)}</span></span>
-                <input type="checkbox" className="size-4 accent-[#FF5A1F]" checked={(m.upsell_product_ids ?? []).includes(p.id)} onChange={() => toggleUpsell(p.id)} />
+                <input type="checkbox" className="size-4 accent-[#B5121B]" checked={(m.upsell_product_ids ?? []).includes(p.id)} onChange={() => toggleUpsell(p.id)} />
               </label>
             </li>
           ))}

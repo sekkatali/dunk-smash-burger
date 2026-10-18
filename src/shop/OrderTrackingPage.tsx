@@ -124,9 +124,9 @@ export function OrderTrackingPage() {
         <p className="mb-4 rounded-2xl bg-red-100 p-4 text-sm font-semibold text-danger">Le paiement n'a pas abouti. Tu peux réessayer ou nous contacter.</p>
       )}
 
-      <div className="rounded-3xl bg-ink p-6 text-white">
+      <div className="rounded-3xl bg-wine p-6 text-cream">
         <p className="text-sm text-white/60">Commande n°{order.number} · {timeOf(order.created_at)}</p>
-        <h1 className="font-display mt-2 text-4xl sm:text-5xl">{headline}</h1>
+        <h1 className="font-display mt-2 text-3xl sm:text-4xl">{headline}</h1>
         {order.status === 'cancelled' && order.cancel_reason && <p className="mt-2 text-white/70">{order.cancel_reason}</p>}
         {order.status === 'new' && (
           <p className="mt-2 text-white/70">On la valide dans un instant. Cette page se met à jour toute seule.</p>

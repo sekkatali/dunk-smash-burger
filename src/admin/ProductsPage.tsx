@@ -615,7 +615,7 @@ function GroupForm({ menu, group, onClose, onSaved }: { menu: MenuData; group: G
                   <div className="grid gap-1.5 sm:grid-cols-2">
                     {c.products.map((p) => (
                       <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-stone-50">
-                        <input type="checkbox" className="size-4 accent-[#FF5A1F]" checked={productIds.includes(p.id)}
+                        <input type="checkbox" className="size-4 accent-[#B5121B]" checked={productIds.includes(p.id)}
                           onChange={(e) => setProductIds((ids) => e.target.checked ? [...ids, p.id] : ids.filter((x) => x !== p.id))} />
                         <span className="text-sm">{p.name}</span>
                       </label>

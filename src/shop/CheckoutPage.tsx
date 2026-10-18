@@ -162,7 +162,7 @@ export function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <p className="font-display text-3xl">Ton panier est vide</p>
+        <p className="font-display text-2xl">Ton panier est vide</p>
         <Link to="/" className="mt-6 inline-block rounded-full bg-ball px-6 py-3 font-bold text-white">Retour au menu</Link>
       </div>
     )
@@ -175,7 +175,7 @@ export function CheckoutPage() {
       <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-stone-600 hover:text-ink">
         <ArrowLeft className="size-4" /> Retour au menu
       </Link>
-      <h1 className="font-display mt-4 text-5xl">Finaliser</h1>
+      <h1 className="font-display mt-4 text-4xl">Finaliser</h1>
 
       <form onSubmit={submit} className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-5">
@@ -255,7 +255,7 @@ export function CheckoutPage() {
 
         {/* Récap */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-          <div className="rounded-3xl bg-ink p-5 text-white">
+          <div className="rounded-3xl bg-wine p-5 text-cream">
             <h2 className="font-display text-2xl">Ta commande</h2>
             <ul className="mt-4 space-y-3">
               {items.map((i) => (

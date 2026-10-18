@@ -36,14 +36,14 @@ export function ShopLayout() {
         </div>
       )}
 
-      <header className="sticky top-0 z-30 bg-ink/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-black/5 bg-cream/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link to="/" aria-label="Accueil">
             <Logo logoUrl={r.logo_url || undefined} />
           </Link>
           <div className="flex items-center gap-2">
             {r.phone && (
-              <a href={`tel:${r.phone}`} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-white/80 hover:text-white sm:flex">
+              <a href={`tel:${r.phone}`} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-ink/70 hover:text-ink sm:flex">
                 <Phone className="size-4" /> {r.phone}
               </a>
             )}
@@ -66,45 +66,45 @@ export function ShopLayout() {
         <Outlet />
       </main>
 
-      <footer className="mt-16 bg-ink text-white/80">
+      <footer className="mt-16 bg-wine text-cream/80">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-3">
           <div>
             <Logo logoUrl={r.logo_url || undefined} />
-            <p className="mt-4 max-w-xs text-sm text-white/60">{r.tagline}</p>
+            <p className="mt-4 max-w-xs text-sm text-cream/60">{r.tagline}</p>
           </div>
           <div>
-            <h4 className="font-display mb-3 text-lg text-white">Horaires</h4>
+            <h4 className="font-display mb-3 text-base text-cream">Horaires</h4>
             <ul className="space-y-1 text-sm">
               {hoursSummary(settings).map((h) => (
                 <li key={h.label} className="flex justify-between gap-4 max-w-60">
-                  <span className="text-white/50">{h.label}</span>
+                  <span className="text-cream/50">{h.label}</span>
                   <span>{h.value}</span>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="font-display mb-3 text-lg text-white">Contact</h4>
+            <h4 className="font-display mb-3 text-base text-cream">Contact</h4>
             <ul className="space-y-2 text-sm">
               {r.address && (
-                <li className="flex gap-2"><MapPin className="size-4 shrink-0 text-ball" /> {r.address}{r.city ? `, ${r.city}` : ''}</li>
+                <li className="flex gap-2"><MapPin className="size-4 shrink-0 text-cream/60" /> {r.address}{r.city ? `, ${r.city}` : ''}</li>
               )}
               {r.phone && (
-                <li><a className="flex gap-2 hover:text-white" href={`tel:${r.phone}`}><Phone className="size-4 text-ball" /> {r.phone}</a></li>
+                <li><a className="flex gap-2 hover:text-cream" href={`tel:${r.phone}`}><Phone className="size-4 text-cream/60" /> {r.phone}</a></li>
               )}
               {r.whatsapp && (
-                <li><a className="flex gap-2 hover:text-white" href={waLink(r.whatsapp)} target="_blank" rel="noreferrer"><MessageCircle className="size-4 text-ball" /> WhatsApp</a></li>
+                <li><a className="flex gap-2 hover:text-cream" href={waLink(r.whatsapp)} target="_blank" rel="noreferrer"><MessageCircle className="size-4 text-cream/60" /> WhatsApp</a></li>
               )}
               {r.instagram && (
-                <li><a className="hover:text-white" href={`https://instagram.com/${r.instagram.replace(/^@/, '')}`} target="_blank" rel="noreferrer">Instagram · @{r.instagram.replace(/^@/, '')}</a></li>
+                <li><a className="hover:text-cream" href={`https://instagram.com/${r.instagram.replace(/^@/, '')}`} target="_blank" rel="noreferrer">Instagram · @{r.instagram.replace(/^@/, '')}</a></li>
               )}
               {r.tiktok && (
-                <li><a className="hover:text-white" href={`https://tiktok.com/@${r.tiktok.replace(/^@/, '')}`} target="_blank" rel="noreferrer">TikTok · @{r.tiktok.replace(/^@/, '')}</a></li>
+                <li><a className="hover:text-cream" href={`https://tiktok.com/@${r.tiktok.replace(/^@/, '')}`} target="_blank" rel="noreferrer">TikTok · @{r.tiktok.replace(/^@/, '')}</a></li>
               )}
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/10 py-5 text-center text-xs text-white/40">
+        <div className="border-t border-cream/10 py-5 text-center text-xs text-cream/40">
           © {new Date().getFullYear()} {r.name}
         </div>
       </footer>
