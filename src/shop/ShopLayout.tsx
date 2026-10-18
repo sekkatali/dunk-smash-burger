@@ -68,6 +68,7 @@ export function ShopLayout() {
             </button>
           </div>
         </div>
+        <InstallBanner />
       </header>
 
       <main>
@@ -118,7 +119,6 @@ export function ShopLayout() {
       </footer>
 
       <CartDrawer />
-      <InstallBanner />
     </div>
   )
 }
