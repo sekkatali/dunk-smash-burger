@@ -56,10 +56,22 @@ export default function DriverPortal() {
     void load()
   }
 
-  const update = async (o: PortalOrder, status: 'delivering' | 'delivered') => {
-    if (status === 'delivered' && !confirm(`Confirmer la livraison de la commande n°${o.number}${o.payment_status !== 'paid' ? ` et l'encaissement de ${money(o.total)}` : ''} ?`)) return
+  const update = async (o: PortalOrder, status: 'delivering' | 'delivered' | 'failed') => {
+    let cash: number | null = null
+    let note: string | null = null
+    if (status === 'delivered') {
+      if (o.payment_method === 'cash' && o.payment_status !== 'paid') {
+        const v = window.prompt(`Montant encaissé en espèces pour la commande n°${o.number} ?`, String(o.total))
+        if (v === null) return
+        cash = Number(v.replace(',', '.')) || o.total
+      } else if (!confirm(`Confirmer la livraison de la commande n°${o.number} ?`)) return
+    }
+    if (status === 'failed') {
+      note = window.prompt('Que s’est-il passé ?', 'Client injoignable')
+      if (note === null) return
+    }
     setBusy(o.id)
-    await supabase.rpc('driver_update_order', { p_token: token, p_order: o.id, p_status: status })
+    await supabase.rpc('driver_update_order_v2', { p_token: token, p_order: o.id, p_status: status, p_cash: cash, p_note: note })
     setBusy(null)
     void load()
   }
@@ -128,9 +140,14 @@ export default function DriverPortal() {
                 {o.address && <a href={mapsLink(`${o.address} ${settings.restaurant.city}`)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 rounded-xl bg-stone-100 py-2 text-xs font-semibold"><MapPin className="size-5" /> Itinéraire</a>}
               </div>
               {o.status === 'delivering' ? (
-                <button type="button" disabled={busy === o.id} onClick={() => update(o, 'delivered')} className="mt-3 h-14 w-full rounded-xl bg-emerald-600 text-lg font-bold text-white disabled:opacity-50">
-                  ✓ Livrée
-                </button>
+                <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+                  <button type="button" disabled={busy === o.id} onClick={() => update(o, 'delivered')} className="h-14 rounded-xl bg-emerald-600 text-lg font-bold text-white disabled:opacity-50">
+                    ✓ Livrée
+                  </button>
+                  <button type="button" disabled={busy === o.id} onClick={() => update(o, 'failed')} className="h-14 rounded-xl bg-stone-200 px-4 text-sm font-bold text-stone-700 disabled:opacity-50">
+                    Échec
+                  </button>
+                </div>
               ) : (
                 <button type="button" disabled={busy === o.id || o.status !== 'ready'} onClick={() => update(o, 'delivering')} className="mt-3 h-14 w-full rounded-xl bg-ball text-lg font-bold text-white disabled:opacity-40">
                   {o.status === 'ready' ? 'Je pars en livraison' : 'En préparation…'}

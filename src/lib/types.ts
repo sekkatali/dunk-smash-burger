@@ -47,6 +47,8 @@ export type ProductOptionGroup = {
 
 export type GroupWithOptions = OptionGroup & { options: OptionItem[] }
 
+export type LoyaltyOption = { type: 'credit' | 'category'; label: string; amount?: number; category?: string }
+
 export type Zone = { name: string; fee: number | null; min_order: number | null; active: boolean }
 
 export type DayHours = { day: number; open: string; close: string; closed: boolean }
@@ -74,6 +76,29 @@ export type Settings = {
     prep_time_min: number
     delivery_time_min: number
     closed_message: string
+    asap_enabled: boolean
+    scheduling_enabled: boolean
+    slot_minutes: number
+    schedule_days_ahead: number
+    disabled_slots: string[]
+    require_account: boolean
+    first_cash_confirmation: boolean
+    pickup_min_order: number
+  }
+  delivery: {
+    mode: 'distance' | 'zones'
+    max_km: number
+    min_order: number
+    free_threshold: number
+    tiers: { up_to_km: number; fee: number }[]
+  }
+  loyalty: {
+    enabled: boolean
+    stamps_required: number
+    min_order: number
+    progress_expiry_days: number
+    reward_expiry_days: number
+    rewards: LoyaltyOption[]
   }
   hours: DayHours[]
   zones: Zone[]
@@ -99,12 +124,14 @@ export type Settings = {
 
 export type OrderStatus =
   | 'pending_payment'
+  | 'pending_confirmation'
   | 'new'
   | 'accepted'
   | 'preparing'
   | 'ready'
   | 'delivering'
   | 'delivered'
+  | 'failed'
   | 'cancelled'
 
 export type PaymentMethod = 'cash' | 'card_on_delivery' | 'cmi'
@@ -158,6 +185,20 @@ export type Order = {
   cancelled_at: string | null
   created_at: string
   updated_at: string
+  customer_id: string | null
+  scheduled_for: string | null
+  pickup_code: string | null
+  distance_km: number | null
+  lat: number | null
+  lng: number | null
+  rating: number | null
+  rating_comment: string | null
+  reward_discount: number
+  credit_used: number
+  requires_confirmation: boolean
+  confirmed_at: string | null
+  failed_reason: string | null
+  cash_collected: number | null
   order_items?: OrderItem[]
 }
 
@@ -190,4 +231,31 @@ export type PromoCode = {
   ends_at: string | null
   active: boolean
   created_at: string
+  valid_days_after_signup: number | null
+  requires_account: boolean
+  order_types: string[] | null
+  payment_methods: string[] | null
+  budget: number | null
+}
+
+export type Customer = {
+  user_id: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  phone_verified: boolean
+  email: string | null
+  marketing_opt_in: boolean
+  created_at: string
+}
+
+export type CustomerAddress = {
+  id: string
+  user_id: string
+  label: string | null
+  address: string
+  details: string | null
+  lat: number | null
+  lng: number | null
+  is_default: boolean
 }

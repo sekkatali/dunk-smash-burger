@@ -12,6 +12,20 @@ export const DEFAULT_SETTINGS: Settings = {
     accept_orders: true, delivery_enabled: true, pickup_enabled: true, min_order: 50, delivery_fee: 15,
     free_delivery_threshold: 200, prep_time_min: 20, delivery_time_min: 40,
     closed_message: "On recharge les plaques ! Reviens pendant nos horaires d'ouverture.",
+    asap_enabled: true, scheduling_enabled: true, slot_minutes: 15, schedule_days_ahead: 2, disabled_slots: [],
+    require_account: true, first_cash_confirmation: true, pickup_min_order: 0,
+  },
+  delivery: {
+    mode: 'distance', max_km: 10, min_order: 75, free_threshold: 150,
+    tiers: [{ up_to_km: 3, fee: 10 }, { up_to_km: 5, fee: 15 }, { up_to_km: 7, fee: 20 }, { up_to_km: 10, fee: 25 }],
+  },
+  loyalty: {
+    enabled: true, stamps_required: 5, min_order: 75, progress_expiry_days: 180, reward_expiry_days: 30,
+    rewards: [
+      { type: 'credit', label: '35 DH de crédit DUNK', amount: 35 },
+      { type: 'category', label: 'Un accompagnement offert', category: 'Sides' },
+      { type: 'category', label: 'Un dessert offert', category: 'Desserts' },
+    ],
   },
   hours: [],
   zones: [],
@@ -29,6 +43,8 @@ export function mergeSettings(data: Partial<Settings> | null | undefined): Setti
   return {
     restaurant: { ...DEFAULT_SETTINGS.restaurant, ...(d.restaurant ?? {}) },
     ordering: { ...DEFAULT_SETTINGS.ordering, ...(d.ordering ?? {}) },
+    delivery: { ...DEFAULT_SETTINGS.delivery, ...(d.delivery ?? {}) },
+    loyalty: { ...DEFAULT_SETTINGS.loyalty, ...(d.loyalty ?? {}) },
     hours: d.hours ?? DEFAULT_SETTINGS.hours,
     zones: d.zones ?? DEFAULT_SETTINGS.zones,
     payments: { ...DEFAULT_SETTINGS.payments, ...(d.payments ?? {}) },

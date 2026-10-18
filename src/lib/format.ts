@@ -40,23 +40,27 @@ export function elapsed(iso: string): string {
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
   pending_payment: 'Paiement en attente',
+  pending_confirmation: 'À confirmer',
   new: 'Nouvelle',
   accepted: 'Acceptée',
   preparing: 'En préparation',
   ready: 'Prête',
   delivering: 'En livraison',
   delivered: 'Livrée',
+  failed: 'Échec de livraison',
   cancelled: 'Annulée',
 }
 
 export const STATUS_COLOR: Record<OrderStatus, string> = {
   pending_payment: 'bg-stone-200 text-stone-700',
+  pending_confirmation: 'bg-fuchsia-100 text-fuchsia-800',
   new: 'bg-orange-100 text-orange-800',
   accepted: 'bg-amber-100 text-amber-800',
   preparing: 'bg-amber-100 text-amber-800',
   ready: 'bg-sky-100 text-sky-800',
   delivering: 'bg-violet-100 text-violet-800',
   delivered: 'bg-emerald-100 text-emerald-800',
+  failed: 'bg-red-100 text-red-700',
   cancelled: 'bg-red-100 text-red-700',
 }
 

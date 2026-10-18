@@ -67,7 +67,7 @@ export default function AdminLayout() {
 
   // --- Compteur des nouvelles commandes
   const refreshCounts = useCallback(async () => {
-    const { data } = await supabase.from('orders').select('id').eq('status', 'new')
+    const { data } = await supabase.from('orders').select('id').in('status', ['new', 'pending_confirmation'])
     const ids = (data ?? []).map((d) => d.id as string)
     const fresh = ids.filter((id) => !knownNew.current.has(id))
     if (fresh.length > 0 && knownNew.current.size + fresh.length > 0 && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {

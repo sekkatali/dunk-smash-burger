@@ -11,9 +11,9 @@ import { PageHeader } from './PageHeader'
 import { useAdmin } from './adminContext'
 import { OrderDetail, nextStep, updateOrderStatus } from './OrderDetail'
 
-const ACTIVE: OrderStatus[] = ['new', 'accepted', 'preparing', 'ready', 'delivering']
+const ACTIVE: OrderStatus[] = ['pending_confirmation', 'new', 'accepted', 'preparing', 'ready', 'delivering']
 const COLUMNS: { id: string; title: string; statuses: OrderStatus[]; accent: string }[] = [
-  { id: 'new', title: 'Nouvelles', statuses: ['new'], accent: 'bg-ball' },
+  { id: 'new', title: 'Nouvelles', statuses: ['pending_confirmation', 'new'], accent: 'bg-ball' },
   { id: 'kitchen', title: 'En cuisine', statuses: ['accepted', 'preparing'], accent: 'bg-amber-500' },
   { id: 'ready', title: 'Prêtes', statuses: ['ready'], accent: 'bg-sky-500' },
   { id: 'delivering', title: 'En livraison', statuses: ['delivering'], accent: 'bg-violet-500' },
@@ -217,12 +217,18 @@ function OrderCard({ order: o, drivers, onOpen, onNext }: { order: Order; driver
   const driver = drivers.find((d) => d.id === o.driver_id)
   const itemsCount = (o.order_items ?? []).reduce((s, i) => s + i.quantity, 0)
   return (
-    <div className={cx('rounded-xl bg-white p-3 shadow-sm ring-1', o.status === 'new' ? 'ring-2 ring-ball' : 'ring-stone-200')}>
+    <div className={cx('rounded-xl bg-white p-3 shadow-sm ring-1', o.status === 'new' ? 'ring-2 ring-ball' : o.status === 'pending_confirmation' ? 'ring-2 ring-fuchsia-400' : 'ring-stone-200')}>
       <button type="button" onClick={onOpen} className="block w-full text-left">
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold">#{o.number}</span>
           <span className={cx('text-xs font-semibold', late ? 'text-danger' : 'text-stone-500')}>{elapsed(o.created_at)}</span>
         </div>
+        {o.status === 'pending_confirmation' && (
+          <p className="mt-1 rounded-md bg-fuchsia-50 px-2 py-1 text-xs font-semibold text-fuchsia-800">1ʳᵉ commande espèces : confirmer par WhatsApp / appel</p>
+        )}
+        {o.scheduled_for && (
+          <p className="mt-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-800">⏰ Programmée {new Date(o.scheduled_for).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ })}</p>
+        )}
         <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
           {o.type === 'delivery' ? <Bike className="size-4 text-stone-400" /> : <Store className="size-4 text-stone-400" />}
           {o.customer_name}
@@ -240,7 +246,7 @@ function OrderCard({ order: o, drivers, onOpen, onNext }: { order: Order; driver
         </div>
       </button>
       {next && (
-        <Button size="sm" variant={o.status === 'new' ? 'primary' : 'dark'} className="mt-3 w-full" onClick={onNext}>
+        <Button size="sm" variant={o.status === 'new' || o.status === 'pending_confirmation' ? 'primary' : 'dark'} className="mt-3 w-full" onClick={onNext}>
           {next.label}
         </Button>
       )}

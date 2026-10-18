@@ -8,6 +8,9 @@ import { ShopMenuProvider } from './shop/menuContext'
 import { MenuPage } from './shop/MenuPage'
 import { CheckoutPage } from './shop/CheckoutPage'
 import { OrderTrackingPage } from './shop/OrderTrackingPage'
+import { LoginPage as CustomerLoginPage } from './shop/LoginPage'
+import { AccountPage } from './shop/AccountPage'
+import { CustomerProvider } from './lib/customer'
 
 const AdminLayout = lazy(() => import('./admin/AdminLayout'))
 const LoginPage = lazy(() => import('./admin/LoginPage'))
@@ -28,16 +31,20 @@ export default function App() {
           <Routes>
             <Route
               element={
-                <ShopMenuProvider>
-                  <CartProvider>
-                    <ShopLayout />
-                  </CartProvider>
-                </ShopMenuProvider>
+                <CustomerProvider>
+                  <ShopMenuProvider>
+                    <CartProvider>
+                      <ShopLayout />
+                    </CartProvider>
+                  </ShopMenuProvider>
+                </CustomerProvider>
               }
             >
               <Route index element={<MenuPage />} />
               <Route path="commande" element={<CheckoutPage />} />
               <Route path="suivi/:token" element={<OrderTrackingPage />} />
+              <Route path="connexion" element={<CustomerLoginPage />} />
+              <Route path="compte/:tab?" element={<AccountPage />} />
             </Route>
 
             <Route path="admin/login" element={<LoginPage />} />

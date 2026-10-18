@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { MapPin, MessageCircle, Phone, ShoppingBag } from 'lucide-react'
+import { MapPin, MessageCircle, Phone, ShoppingBag, UserRound } from 'lucide-react'
+import { useCustomer } from '../lib/customer'
+import { InstallBanner } from './InstallBanner'
 import { Logo } from '../components/Logo'
 import { useCart } from '../lib/cart'
 import { useSettings } from '../lib/settings'
@@ -12,6 +14,7 @@ import { CartDrawer } from './CartDrawer'
 export function ShopLayout() {
   const { settings, loading } = useSettings()
   const { count, setOpen } = useCart()
+  const { session, profile } = useCustomer()
   const location = useLocation()
   const r = settings.restaurant
 
@@ -47,6 +50,11 @@ export function ShopLayout() {
                 <Phone className="size-4" /> {r.phone}
               </a>
             )}
+            <Link to={session ? '/compte' : '/connexion'} aria-label="Mon compte"
+              className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-ink/80 hover:text-ink">
+              <UserRound className="size-5" />
+              <span className="hidden sm:inline">{session ? (profile?.first_name || 'Mon compte') : 'Connexion'}</span>
+            </Link>
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -110,6 +118,7 @@ export function ShopLayout() {
       </footer>
 
       <CartDrawer />
+      <InstallBanner />
     </div>
   )
 }

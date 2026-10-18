@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Bike, MapPin, MessageCircle, Phone, Printer, Store } from 'lucide-react'
 import { supabase, errorMessage } from '../lib/supabase'
@@ -11,6 +11,7 @@ import type { Driver, Order, OrderStatus } from '../lib/types'
 import { Badge, Button, Modal, Select, Textarea, useToast } from '../components/ui'
 
 export const NEXT_STEP: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {
+  pending_confirmation: { status: 'preparing', label: 'Confirmée par le client · Accepter' },
   new: { status: 'preparing', label: 'Accepter' },
   accepted: { status: 'preparing', label: 'En préparation' },
   preparing: { status: 'ready', label: 'Prête' },
@@ -26,6 +27,7 @@ export async function updateOrderStatus(o: Order, status: OrderStatus, extra: Pa
   const patch: Partial<Order> = { status, ...extra }
   // paiement à la livraison : encaissé quand la commande est remise
   if (status === 'delivered' && o.payment_method !== 'cmi' && o.payment_status === 'pending') patch.payment_status = 'paid'
+  if (o.status === 'pending_confirmation' && status !== 'cancelled') patch.confirmed_at = new Date().toISOString()
   const { error } = await supabase.from('orders').update(patch).eq('id', o.id)
   if (error) throw error
   if (status === 'delivering' && o.driver_id) await supabase.from('drivers').update({ status: 'busy' }).eq('id', o.driver_id)
@@ -92,8 +94,14 @@ export function OrderDetail({ order, drivers, onClose, onChanged }: {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={print}><Printer className="size-4" /> Ticket</Button>
-              {!['delivered', 'cancelled'].includes(order.status) && (
+              {!['delivered', 'cancelled', 'failed'].includes(order.status) && (
                 <Button variant="ghost" size="sm" className="text-danger" onClick={() => setCancelOpen(true)}>Annuler</Button>
+              )}
+              {order.status === 'delivering' && (
+                <Button variant="ghost" size="sm" className="text-danger" loading={busy} onClick={() => {
+                  const reason = window.prompt('Motif de l’échec de livraison ?', 'Client injoignable')
+                  if (reason !== null) void run(() => updateOrderStatus(order, 'failed', { failed_reason: reason || null }), 'Livraison marquée en échec')
+                }}>Échec livraison</Button>
               )}
             </div>
             <div className="flex gap-2">
@@ -147,6 +155,25 @@ export function OrderDetail({ order, drivers, onClose, onChanged }: {
               <div className="rounded-2xl bg-amber-50 p-4 text-sm">
                 <p className="font-semibold text-amber-900">Note du client</p>
                 <p className="mt-1 text-amber-900">{order.notes}</p>
+              </div>
+            )}
+
+            {(order.scheduled_for || order.pickup_code || order.distance_km || order.customer_id || order.rating) && (
+              <div className="flex flex-wrap gap-2 text-xs">
+                {order.scheduled_for && <Badge className="bg-sky-100 text-sky-800">⏰ Programmée {dateTime(order.scheduled_for)}</Badge>}
+                {order.pickup_code && <Badge className="bg-stone-900 text-white">Code retrait {order.pickup_code}</Badge>}
+                {order.distance_km && <Badge>{String(order.distance_km).replace('.', ',')} km</Badge>}
+                {order.customer_id && <Badge className="bg-emerald-100 text-emerald-800">Compte client</Badge>}
+                {order.rating && <Badge className="bg-amber-100 text-amber-800">{'★'.repeat(order.rating)} {order.rating_comment ? `« ${order.rating_comment} »` : ''}</Badge>}
+                {order.reward_discount > 0 && <Badge className="bg-violet-100 text-violet-800">Récompense fidélité −{money(order.reward_discount)}</Badge>}
+                {order.credit_used > 0 && <Badge className="bg-violet-100 text-violet-800">Crédit −{money(order.credit_used)}</Badge>}
+              </div>
+            )}
+
+            {order.status === 'pending_confirmation' && (
+              <div className="rounded-2xl bg-fuchsia-50 p-4 text-sm text-fuchsia-900">
+                <p className="font-semibold">1ʳᵉ commande payée en espèces</p>
+                <p className="mt-1">Confirme avec le client (WhatsApp ou appel) avant de lancer la préparation.</p>
               </div>
             )}
 
@@ -226,7 +253,9 @@ export function OrderDetail({ order, drivers, onClose, onChanged }: {
               {order.delivering_at && <p>Partie : {timeOf(order.delivering_at)}{driver ? ` avec ${driver.name}` : ''}</p>}
               {order.delivered_at && <p>Livrée : {timeOf(order.delivered_at)}</p>}
               {order.cancelled_at && <p>Annulée : {timeOf(order.cancelled_at)}{order.cancel_reason ? ` — ${order.cancel_reason}` : ''}</p>}
+              {order.failed_reason && <p>Échec : {order.failed_reason}</p>}
             </div>
+            <EventsLog orderId={order.id} />
           </div>
         </div>
       </Modal>
@@ -284,6 +313,36 @@ function Ticket({ order, restaurant }: { order: Order; restaurant: string }) {
       {order.address_details && <div>{order.address_details}</div>}
       {order.zone && <div>Zone : {order.zone}</div>}
       {order.notes && <div style={{ marginTop: 4 }}>Note : {order.notes}</div>}
+    </div>
+  )
+}
+
+type OrderEvent = { id: number; status: string | null; payment_status: string | null; driver_id: string | null; actor: string | null; note: string | null; created_at: string }
+
+function EventsLog({ orderId }: { orderId: string }) {
+  const [events, setEvents] = useState<OrderEvent[]>([])
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    supabase.from('order_events').select('*').eq('order_id', orderId).order('created_at').then(({ data }) => setEvents((data ?? []) as OrderEvent[]))
+  }, [open, orderId])
+  return (
+    <div className="mt-3">
+      <button type="button" onClick={() => setOpen(!open)} className="text-xs font-semibold text-stone-500 underline">{open ? 'Masquer' : 'Voir'} le journal (qui a fait quoi)</button>
+      {open && (
+        <ul className="mt-2 space-y-1 text-xs text-stone-600">
+          {events.map((e) => (
+            <li key={e.id}>
+              <span className="text-stone-400">{dateTime(e.created_at)}</span> ·{' '}
+              {e.status ? (STATUS_LABEL as Record<string, string>)[e.status] ?? e.status : ''}
+              {e.payment_status ? ` paiement ${(PAYMENT_STATUS_LABEL as Record<string, string>)[e.payment_status] ?? e.payment_status}` : ''}
+              {e.driver_id ? ' livreur assigné' : ''}
+              {e.note ? ` — ${e.note}` : ''}
+              <span className="text-stone-400"> {e.actor ? '(équipe)' : '(client / système)'}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
