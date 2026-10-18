@@ -11,6 +11,9 @@ import { Logo } from '../components/Logo'
 import { Button, PageLoader, cx } from '../components/ui'
 import { AdminContext, getAudio, playChime } from './adminContext'
 
+// Pages réservées au propriétaire et aux administrateurs
+const ADMIN_ONLY = ['marketing', 'paiement', 'parametres']
+
 const NAV = [
   { to: 'commandes', label: 'Commandes', icon: ClipboardList },
   { to: 'produits', label: 'Produits', icon: Utensils },
@@ -148,7 +151,7 @@ export default function AdminLayout() {
     <nav className="flex h-full flex-col">
       <div className="px-5 py-5"><Logo className="h-12" /></div>
       <ul className="flex-1 space-y-1 px-3">
-        {NAV.map((n) => (
+        {NAV.filter((n) => role !== 'staff' || !ADMIN_ONLY.includes(n.to)).map((n) => (
           <li key={n.to}>
             <NavLink
               to={n.to}
