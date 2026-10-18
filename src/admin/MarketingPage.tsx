@@ -10,7 +10,7 @@ import {
 } from '../components/ui'
 import { PageHeader } from './PageHeader'
 
-type Tab = 'promos' | 'site' | 'customers' | 'tracking'
+type Tab = 'promos' | 'loyalty' | 'site' | 'customers' | 'tracking'
 
 export default function MarketingPage() {
   const [tab, setTab] = useState<Tab>('promos')
@@ -24,6 +24,7 @@ export default function MarketingPage() {
             { id: 'promos', label: 'Codes promo' },
             { id: 'site', label: 'Bannière & mise en avant' },
             { id: 'customers', label: 'Clients' },
+            { id: 'loyalty', label: 'DUNK Card' },
             { id: 'tracking', label: 'Pixels & liens' },
           ]} />
         }
@@ -32,6 +33,7 @@ export default function MarketingPage() {
       {tab === 'site' && <SiteTab />}
       {tab === 'customers' && <CustomersTab />}
       {tab === 'tracking' && <TrackingTab />}
+      {tab === 'loyalty' && <LoyaltyAdminTab />}
     </div>
   )
 }
@@ -139,6 +141,11 @@ function PromoForm({ promo, onClose, onSaved }: { promo: PromoCode | null; onClo
     max_uses: promo?.max_uses ?? null as number | null,
     max_uses_per_customer: promo?.max_uses_per_customer ?? null as number | null,
     first_order_only: promo?.first_order_only ?? false,
+    valid_days_after_signup: promo?.valid_days_after_signup ?? null as number | null,
+    requires_account: promo?.requires_account ?? false,
+    order_types: promo?.order_types ?? null as string[] | null,
+    payment_methods: promo?.payment_methods ?? null as string[] | null,
+    budget: promo?.budget ?? null as number | null,
     starts_at: toLocalInput(promo?.starts_at ?? null),
     ends_at: toLocalInput(promo?.ends_at ?? null),
     active: promo?.active ?? true,
@@ -160,6 +167,11 @@ function PromoForm({ promo, onClose, onSaved }: { promo: PromoCode | null; onClo
       max_uses: f.max_uses || null,
       max_uses_per_customer: f.max_uses_per_customer || null,
       first_order_only: f.first_order_only,
+      valid_days_after_signup: f.valid_days_after_signup || null,
+      requires_account: f.requires_account || Boolean(f.valid_days_after_signup),
+      order_types: f.order_types && f.order_types.length ? f.order_types : null,
+      payment_methods: f.payment_methods && f.payment_methods.length ? f.payment_methods : null,
+      budget: f.budget || null,
       starts_at: f.starts_at ? new Date(f.starts_at).toISOString() : null,
       ends_at: f.ends_at ? new Date(f.ends_at).toISOString() : null,
       active: f.active,
@@ -201,6 +213,40 @@ function PromoForm({ promo, onClose, onSaved }: { promo: PromoCode | null; onClo
         <Field label="Fin (optionnel)"><Input type="datetime-local" value={f.ends_at} onChange={(e) => set('ends_at', e.target.value)} /></Field>
         <div className="space-y-3 sm:col-span-2">
           <Toggle checked={f.first_order_only} onChange={(v) => set('first_order_only', v)} label="Réservé à la première commande" description="Idéal pour un code de bienvenue" />
+          <Toggle checked={f.requires_account} onChange={(v) => set('requires_account', v)} label="Réservé aux clients avec un compte" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Valable X jours après l'inscription" hint="Vide = sans limite (ex : 7 pour WELCOME50)"><NumberInput value={f.valid_days_after_signup} onChange={(v) => set('valid_days_after_signup', v)} min={1} /></Field>
+            <Field label="Budget total de remises (DH)" hint="Le code s'arrête quand le budget est atteint"><NumberInput value={f.budget} onChange={(v) => set('budget', v)} min={0} /></Field>
+          </div>
+          <div className="flex flex-wrap gap-6 text-sm">
+            <div>
+              <p className="mb-1 font-medium">Modes</p>
+              {(['delivery', 'pickup'] as const).map((m) => (
+                <label key={m} className="mr-3 inline-flex items-center gap-1.5">
+                  <input type="checkbox" className="accent-[#B5121B]" checked={!f.order_types || f.order_types.includes(m)}
+                    onChange={(e) => {
+                      const cur = f.order_types ?? ['delivery', 'pickup']
+                      const next = e.target.checked ? [...new Set([...cur, m])] : cur.filter((x) => x !== m)
+                      set('order_types', next.length === 2 ? null : next)
+                    }} /> {m === 'delivery' ? 'Livraison' : 'À emporter'}
+                </label>
+              ))}
+            </div>
+            <div>
+              <p className="mb-1 font-medium">Paiements</p>
+              {(['cash', 'card_on_delivery', 'cmi'] as const).map((m) => (
+                <label key={m} className="mr-3 inline-flex items-center gap-1.5">
+                  <input type="checkbox" className="accent-[#B5121B]" checked={!f.payment_methods || f.payment_methods.includes(m)}
+                    onChange={(e) => {
+                      const all = ['cash', 'card_on_delivery', 'cmi']
+                      const cur = f.payment_methods ?? all
+                      const next = e.target.checked ? [...new Set([...cur, m])] : cur.filter((x) => x !== m)
+                      set('payment_methods', next.length === 3 ? null : next)
+                    }} /> {m === 'cash' ? 'Espèces' : m === 'card_on_delivery' ? 'TPE' : 'En ligne'}
+                </label>
+              ))}
+            </div>
+          </div>
           <Toggle checked={f.active} onChange={(v) => set('active', v)} label="Actif" />
         </div>
       </div>
@@ -506,6 +552,95 @@ function TrackingTab() {
           href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(link)}`}>
           Télécharger le QR code de ce lien →
         </a>
+      </Card>
+    </div>
+  )
+}
+
+/* ===================================================================== DUNK CARD (fidélité) */
+function LoyaltyAdminTab() {
+  const { settings, save } = useSettings()
+  const toast = useToast()
+  const [l, setL] = useState(settings.loyalty)
+  const [stats, setStats] = useState<{ stamps: number; members: number; to_choose: number; available: number; used: number; expired: number; credit: number } | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => setL(settings.loyalty), [settings.loyalty])
+  useEffect(() => {
+    void (async () => {
+      const [st, rw, cr] = await Promise.all([
+        supabase.from('loyalty_stamps').select('user_id, consumed, expired'),
+        supabase.from('loyalty_rewards').select('status'),
+        supabase.from('customer_credits').select('amount, kind'),
+      ])
+      const stamps = (st.data ?? []) as { user_id: string; consumed: boolean; expired: boolean }[]
+      const rewards = (rw.data ?? []) as { status: string }[]
+      setStats({
+        stamps: stamps.length,
+        members: new Set(stamps.map((x) => x.user_id)).size,
+        to_choose: rewards.filter((r) => r.status === 'to_choose').length,
+        available: rewards.filter((r) => r.status === 'available').length,
+        used: rewards.filter((r) => r.status === 'used').length,
+        expired: rewards.filter((r) => r.status === 'expired').length,
+        credit: ((cr.data ?? []) as { amount: number }[]).reduce((a, x) => a + Number(x.amount), 0),
+      })
+    })()
+  }, [])
+
+  const persist = async () => {
+    setSaving(true)
+    try {
+      await save({ ...settings, loyalty: l })
+      toast('DUNK Card enregistrée')
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+  const setOpt = (i: number, v: Partial<Settings['loyalty']['rewards'][number]>) => setL({ ...l, rewards: l.rewards.map((r, idx) => (idx === i ? { ...r, ...v } : r)) })
+
+  return (
+    <div className="space-y-6">
+      {stats && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="Clients avec tampons" value={String(stats.members)} />
+          <Stat label="Tampons distribués" value={String(stats.stamps)} />
+          <Stat label="Récompenses utilisées" value={`${stats.used} / ${stats.used + stats.available + stats.to_choose + stats.expired}`} />
+          <Stat label="Crédit DUNK en circulation" value={money(stats.credit)} />
+        </div>
+      )}
+      <Card title="Règles de la DUNK Card">
+        <div className="space-y-4">
+          <Toggle checked={l.enabled} onChange={(v) => setL({ ...l, enabled: v })} label="Programme actif" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Tampons pour une récompense"><NumberInput value={l.stamps_required} onChange={(v) => setL({ ...l, stamps_required: v ?? 5 })} min={1} /></Field>
+            <Field label="Minimum de produits (DH)"><NumberInput value={l.min_order} onChange={(v) => setL({ ...l, min_order: v ?? 0 })} min={0} /></Field>
+            <Field label="Tampons expirés après (jours sans commande)"><NumberInput value={l.progress_expiry_days} onChange={(v) => setL({ ...l, progress_expiry_days: v ?? 180 })} min={1} /></Field>
+            <Field label="Récompense valable (jours)"><NumberInput value={l.reward_expiry_days} onChange={(v) => setL({ ...l, reward_expiry_days: v ?? 30 })} min={1} /></Field>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">Récompenses au choix</p>
+            <ul className="space-y-2">
+              {l.rewards.map((r, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-2">
+                  <Select className="w-44" value={r.type} onChange={(e) => setOpt(i, { type: e.target.value as 'credit' | 'category' })}>
+                    <option value="credit">Crédit DUNK</option>
+                    <option value="category">Article offert</option>
+                  </Select>
+                  <Input className="min-w-48 flex-1" value={r.label} onChange={(e) => setOpt(i, { label: e.target.value })} placeholder="Libellé affiché" />
+                  {r.type === 'credit'
+                    ? <NumberInput className="w-28" value={r.amount ?? null} onChange={(v) => setOpt(i, { amount: v ?? 0 })} placeholder="DH" />
+                    : <Input className="w-40" value={r.category ?? ''} onChange={(e) => setOpt(i, { category: e.target.value })} placeholder="Catégorie (ex : Desserts)" />}
+                  <button type="button" onClick={() => setL({ ...l, rewards: l.rewards.filter((_, idx) => idx !== i) })} className="p-1.5 text-stone-400 hover:text-danger"><Trash2 className="size-4" /></button>
+                </li>
+              ))}
+            </ul>
+            <Button size="sm" variant="soft" className="mt-2" onClick={() => setL({ ...l, rewards: [...l.rewards, { type: 'category', label: 'Nouvel article offert', category: '' }] })}><Plus className="size-4" /> Ajouter</Button>
+            <p className="mt-2 text-xs text-stone-500">« Article offert » : le client choisit un article de cette catégorie, son prix de base est déduit. Le nom doit correspondre exactement à une catégorie du menu.</p>
+          </div>
+          <Button loading={saving} onClick={persist}>Enregistrer</Button>
+        </div>
       </Card>
     </div>
   )

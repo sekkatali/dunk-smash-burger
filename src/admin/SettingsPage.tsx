@@ -8,6 +8,8 @@ import type { DayHours, Settings, Zone } from '../lib/types'
 import { Badge, Button, Card, Field, Input, NumberInput, PageLoader, Select, Tabs, Textarea, Toggle, cx, useToast } from '../components/ui'
 import { PageHeader } from './PageHeader'
 import { useAdmin } from './adminContext'
+import { AddressPicker } from '../shop/AddressPicker'
+import type { PickedAddress } from '../shop/AddressPicker'
 
 type Tab = 'general' | 'ordering' | 'hours' | 'zones' | 'team'
 
@@ -55,8 +57,8 @@ export default function SettingsPage() {
       <PageHeader
         title="Paramètres"
         actions={<Tabs value={tab} onChange={setTab} tabs={[
-          { id: 'general', label: 'Restaurant' }, { id: 'ordering', label: 'Commandes & livraison' },
-          { id: 'hours', label: 'Horaires' }, { id: 'zones', label: 'Zones de livraison' }, { id: 'team', label: 'Équipe' },
+          { id: 'general', label: 'Restaurant' }, { id: 'ordering', label: 'Commandes & créneaux' },
+          { id: 'zones', label: 'Livraison' }, { id: 'hours', label: 'Horaires' }, { id: 'team', label: 'Équipe' },
         ]} />}
       />
 
@@ -110,11 +112,24 @@ export default function SettingsPage() {
               </div>
             </div>
           </Card>
-          <Card title="Tarifs de livraison">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Frais de livraison (DH)" hint="Utilisé si aucune zone n'est définie"><NumberInput value={o.delivery_fee} onChange={(v) => setO('delivery_fee', v ?? 0)} min={0} /></Field>
-              <Field label="Minimum de commande (DH)"><NumberInput value={o.min_order} onChange={(v) => setO('min_order', v ?? 0)} min={0} /></Field>
-              <Field label="Livraison offerte dès (DH)" hint="0 = jamais" className="sm:col-span-2"><NumberInput value={o.free_delivery_threshold} onChange={(v) => setO('free_delivery_threshold', v ?? 0)} min={0} /></Field>
+          <Card title="Dès que possible et créneaux">
+            <div className="space-y-4">
+              <Toggle checked={o.asap_enabled} onChange={(v) => setO('asap_enabled', v)} label="Commandes « dès que possible »" description="Coupe-le en cas de rush : les clients ne pourront que programmer." />
+              <Toggle checked={o.scheduling_enabled} onChange={(v) => setO('scheduling_enabled', v)} label="Commandes programmées (créneaux)" />
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Durée d'un créneau (min)"><NumberInput value={o.slot_minutes} onChange={(v) => setO('slot_minutes', v ?? 15)} min={5} /></Field>
+                <Field label="Jours à l'avance"><NumberInput value={o.schedule_days_ahead} onChange={(v) => setO('schedule_days_ahead', v ?? 2)} min={0} /></Field>
+              </div>
+              <DisabledSlots value={o.disabled_slots ?? []} onChange={(v) => setO('disabled_slots', v)} />
+            </div>
+          </Card>
+          <Card title="Clients et sécurité">
+            <div className="space-y-4">
+              <Toggle checked={o.require_account} onChange={(v) => setO('require_account', v)} label="Compte client obligatoire pour commander"
+                description="À activer une fois la connexion Google / Apple / SMS configurée dans Supabase." />
+              <Toggle checked={o.first_cash_confirmation} onChange={(v) => setO('first_cash_confirmation', v)} label="Confirmer la 1ʳᵉ commande en espèces"
+                description="Elle arrive « À confirmer » : tu valides par WhatsApp ou appel avant la préparation." />
+              <Field label="Minimum de commande à emporter (DH)" hint="0 = aucun minimum"><NumberInput value={o.pickup_min_order} onChange={(v) => setO('pickup_min_order', v ?? 0)} min={0} /></Field>
             </div>
           </Card>
           <Card title="Message quand c'est fermé" className="lg:col-span-2">
@@ -124,7 +139,24 @@ export default function SettingsPage() {
       )}
 
       {tab === 'hours' && <HoursEditor hours={draft.hours} onChange={(hours) => setDraft({ ...draft, hours })} />}
-      {tab === 'zones' && <ZonesEditor zones={draft.zones} defaultFee={o.delivery_fee} onChange={(zones) => setDraft({ ...draft, zones })} />}
+      {tab === 'zones' && (
+        <div className="space-y-6">
+          <DeliveryEditor value={draft.delivery} onChange={(delivery) => setDraft({ ...draft, delivery })} />
+          {draft.delivery.mode === 'zones' && (
+            <>
+              <Card title="Frais par défaut (mode zones)">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Frais (DH)"><NumberInput value={o.delivery_fee} onChange={(v) => setO('delivery_fee', v ?? 0)} min={0} /></Field>
+                  <Field label="Minimum (DH)"><NumberInput value={o.min_order} onChange={(v) => setO('min_order', v ?? 0)} min={0} /></Field>
+                  <Field label="Offerte dès (DH)"><NumberInput value={o.free_delivery_threshold} onChange={(v) => setO('free_delivery_threshold', v ?? 0)} min={0} /></Field>
+                </div>
+              </Card>
+              <ZonesEditor zones={draft.zones} defaultFee={o.delivery_fee} onChange={(zones) => setDraft({ ...draft, zones })} />
+            </>
+          )}
+          <RestaurantLocation />
+        </div>
+      )}
       {tab === 'team' && <TeamTab />}
 
       {saveBar}
@@ -255,7 +287,7 @@ function TeamTab() {
     void load()
   }
 
-  const ROLE: Record<string, string> = { owner: 'Propriétaire', admin: 'Administrateur', staff: 'Équipe' }
+  const ROLE: Record<string, string> = ROLE_LABELS
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -282,7 +314,10 @@ function TeamTab() {
           <Input className="min-w-52 flex-1" type="email" placeholder="e-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Select className="w-40" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
             <option value="admin">Administrateur</option>
-            <option value="staff">Équipe</option>
+            <option value="manager">Manager</option>
+            <option value="kitchen">Cuisine</option>
+            <option value="marketing">Marketing</option>
+            <option value="support">Support</option>
           </Select>
           <Button onClick={invite}>Inviter</Button>
         </div>
@@ -297,6 +332,97 @@ function TeamTab() {
           </ul>
         )}
       </Card>
+    </div>
+  )
+}
+
+export const ROLE_LABELS: Record<string, string> = {
+  owner: 'Propriétaire', admin: 'Administrateur', manager: 'Manager', kitchen: 'Cuisine',
+  marketing: 'Marketing', support: 'Support', staff: 'Équipe',
+}
+
+function DeliveryEditor({ value, onChange }: { value: Settings['delivery']; onChange: (v: Settings['delivery']) => void }) {
+  const tiers = [...(value.tiers ?? [])].sort((a, b) => a.up_to_km - b.up_to_km)
+  const setTier = (i: number, t: Partial<{ up_to_km: number; fee: number }>) => onChange({ ...value, tiers: tiers.map((x, idx) => (idx === i ? { ...x, ...t } : x)) })
+  return (
+    <Card title="Tarification de la livraison">
+      <div className="mb-5 flex gap-2">
+        {([['distance', 'Au kilomètre (distance routière)'], ['zones', 'Par quartier / zone']] as const).map(([m, l]) => (
+          <button key={m} type="button" onClick={() => onChange({ ...value, mode: m })}
+            className={cx('rounded-xl px-4 py-2 text-sm font-semibold', value.mode === m ? 'bg-ink text-white' : 'bg-stone-100')}>{l}</button>
+        ))}
+      </div>
+      {value.mode === 'distance' && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <p className="mb-2 text-sm font-semibold">Paliers</p>
+            <ul className="space-y-2">
+              {tiers.map((t, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <span className="w-16 text-stone-500">{i === 0 ? '0' : tiers[i - 1].up_to_km} →</span>
+                  <NumberInput value={t.up_to_km} onChange={(v) => setTier(i, { up_to_km: v ?? 0 })} className="w-24" min={0} /><span>km</span>
+                  <NumberInput value={t.fee} onChange={(v) => setTier(i, { fee: v ?? 0 })} className="w-24" min={0} /><span>DH</span>
+                  <button type="button" onClick={() => onChange({ ...value, tiers: tiers.filter((_, idx) => idx !== i) })} className="p-1 text-stone-400 hover:text-danger"><Trash2 className="size-4" /></button>
+                </li>
+              ))}
+            </ul>
+            <Button size="sm" variant="soft" className="mt-3" onClick={() => onChange({ ...value, tiers: [...tiers, { up_to_km: (tiers.at(-1)?.up_to_km ?? 0) + 2, fee: (tiers.at(-1)?.fee ?? 10) + 5 }] })}>
+              <Plus className="size-4" /> Ajouter un palier
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <Field label="Distance maximale (km)" hint="Au-delà : livraison indisponible"><NumberInput value={value.max_km} onChange={(v) => onChange({ ...value, max_km: v ?? 10 })} min={1} /></Field>
+            <Field label="Minimum de produits (DH, avant remise)"><NumberInput value={value.min_order} onChange={(v) => onChange({ ...value, min_order: v ?? 0 })} min={0} /></Field>
+            <Field label="Livraison offerte dès (DH, après remises)" hint="0 = jamais"><NumberInput value={value.free_threshold} onChange={(v) => onChange({ ...value, free_threshold: v ?? 0 })} min={0} /></Field>
+          </div>
+        </div>
+      )}
+      <p className="mt-4 text-xs text-stone-500">La distance est calculée par la route depuis la position du restaurant (ci-dessous), au moment où le client place son adresse.</p>
+    </Card>
+  )
+}
+
+function RestaurantLocation() {
+  const toast = useToast()
+  const [resto, setResto] = useState<{ id: string; lat: number | null; lng: number | null; address: string | null } | null>(null)
+  const [picked, setPicked] = useState<PickedAddress | null>(null)
+  useEffect(() => {
+    supabase.from('restaurants').select('id, lat, lng, address').order('created_at').limit(1).single().then(({ data }) => setResto(data))
+  }, [])
+  const save = async () => {
+    if (!resto || !picked) return
+    const { error } = await supabase.from('restaurants').update({ lat: picked.lat, lng: picked.lng }).eq('id', resto.id)
+    if (error) return toast(errorMessage(error), 'error')
+    toast('Position du restaurant enregistrée')
+  }
+  if (!resto) return null
+  return (
+    <Card title="Position du restaurant (point de départ des livraisons)">
+      <AddressPicker initial={resto.lat != null && resto.lng != null ? { address: resto.address ?? '', lat: resto.lat, lng: resto.lng } : null} onPick={setPicked} />
+      <Button className="mt-3" disabled={!picked} onClick={save}>Enregistrer la position</Button>
+    </Card>
+  )
+}
+
+function DisabledSlots({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [v, setV] = useState('')
+  const upcoming = value.filter((x) => new Date(x).getTime() > Date.now() - 3600000).sort()
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-medium text-stone-700">Créneaux désactivés</p>
+      <div className="flex gap-2">
+        <Input type="datetime-local" step={900} value={v} onChange={(e) => setV(e.target.value)} />
+        <Button variant="soft" disabled={!v} onClick={() => { onChange([...upcoming, new Date(v).toISOString()]); setV('') }}>Bloquer</Button>
+      </div>
+      {upcoming.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {upcoming.map((x) => (
+            <button key={x} type="button" onClick={() => onChange(upcoming.filter((y) => y !== x))} className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-danger">
+              {new Date(x).toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} ✕
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

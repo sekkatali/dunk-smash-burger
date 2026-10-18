@@ -11,8 +11,23 @@ import { Logo } from '../components/Logo'
 import { Button, PageLoader, cx } from '../components/ui'
 import { AdminContext, getAudio, playChime } from './adminContext'
 
-// Pages réservées au propriétaire et aux administrateurs
-const ADMIN_ONLY = ['marketing', 'paiement', 'parametres']
+type Role = 'owner' | 'admin' | 'manager' | 'kitchen' | 'marketing' | 'support' | 'staff'
+
+// Pages accessibles par rôle (le propriétaire et les administrateurs voient tout)
+const ROLE_PAGES: Record<Role, string[] | 'all'> = {
+  owner: 'all',
+  admin: 'all',
+  manager: ['commandes', 'produits', 'livreurs', 'statistiques'],
+  kitchen: ['commandes'],
+  marketing: ['marketing', 'statistiques'],
+  support: ['commandes'],
+  staff: ['commandes', 'produits', 'livreurs', 'statistiques'],
+}
+export const canSee = (role: Role | null, page: string) => {
+  if (!role) return false
+  const pages = ROLE_PAGES[role] ?? []
+  return pages === 'all' || pages.includes(page)
+}
 
 const NAV = [
   { to: 'commandes', label: 'Commandes', icon: ClipboardList },
@@ -29,7 +44,7 @@ export default function AdminLayout() {
   const location = useLocation()
   const { settings } = useSettings()
   const [user, setUser] = useState<User | null>(null)
-  const [role, setRole] = useState<'owner' | 'admin' | 'staff' | null>(null)
+  const [role, setRole] = useState<Role | null>(null)
   const [checking, setChecking] = useState(true)
   const [noSession, setNoSession] = useState(false)
   const [newCount, setNewCount] = useState(0)
@@ -51,7 +66,7 @@ export default function AdminLayout() {
       const { data: r } = await supabase.rpc('claim_staff')
       if (cancelled) return
       setUser(data.session.user)
-      setRole((r as 'owner' | 'admin' | 'staff' | null) ?? null)
+      setRole((r as Role | null) ?? null)
       setChecking(false)
     }
     void check()
@@ -151,7 +166,7 @@ export default function AdminLayout() {
     <nav className="flex h-full flex-col">
       <div className="px-5 py-5"><Logo className="h-12" /></div>
       <ul className="flex-1 space-y-1 px-3">
-        {NAV.filter((n) => role !== 'staff' || !ADMIN_ONLY.includes(n.to)).map((n) => (
+        {NAV.filter((n) => canSee(role, n.to)).map((n) => (
           <li key={n.to}>
             <NavLink
               to={n.to}
@@ -220,7 +235,14 @@ export default function AdminLayout() {
         )}
 
         <main className="mx-auto max-w-7xl p-4 sm:p-6">
-          <Outlet />
+          {(() => {
+            const page = location.pathname.split('/')[2] ?? ''
+            if (page && !canSee(role, page)) {
+              const first = NAV.find((n) => canSee(role, n.to))
+              return <Navigate to={`/admin/${first?.to ?? 'commandes'}`} replace />
+            }
+            return <Outlet />
+          })()}
         </main>
       </div>
     </AdminContext.Provider>

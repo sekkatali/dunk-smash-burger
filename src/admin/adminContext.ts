@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js'
 
 export type AdminCtx = {
   user: User
-  role: 'owner' | 'admin' | 'staff'
+  role: 'owner' | 'admin' | 'manager' | 'kitchen' | 'marketing' | 'support' | 'staff'
   newCount: number
   ordersVersion: number
   refreshCounts: () => void
