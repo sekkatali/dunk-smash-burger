@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Anton", "Impact", sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0e0e0e;
+  --color-ink-2: #1c1b1a;
+  --color-ink-3: #2b2927;
+  --color-cream: #fff6e9;
+  --color-cream-2: #f6ead8;
+  --color-ball: #ff5a1f;
+  --color-ball-dark: #e14810;
+  --color-cheddar: #ffc93c;
+  --color-court: #1f6f4a;
+  --color-danger: #d92d20;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+}
+
+/* Back-office : fond neutre */
+.admin-shell {
+  @apply bg-stone-100 text-stone-900;
+}
+
+.font-display {
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Lignes de terrain en fond du héros */
+.court-lines {
+  background-image:
+    radial-gradient(circle at 50% 120%, transparent 38%, rgba(255, 90, 31, 0.18) 38.2%, rgba(255, 90, 31, 0.18) 38.8%, transparent 39%),
+    radial-gradient(circle at 50% 120%, transparent 18%, rgba(255, 90, 31, 0.14) 18.2%, rgba(255, 90, 31, 0.14) 18.8%, transparent 19%);
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(255, 90, 31, 0); }
+}
+.pulse-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.slide-up {
+  animation: slide-up 0.22s ease-out;
+}
+
+/* Ticket de cuisine imprimable */
+#print-root { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #print-root, #print-root * { visibility: visible; }
+  #print-root {
+    display: block;
+    position: absolute;
+    left: 0; top: 0;
+    width: 76mm;
+    padding: 2mm;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+  }
+  @page { margin: 0; }
+}
